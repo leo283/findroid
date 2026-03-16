@@ -54,6 +54,8 @@ fun ItemButtonsBar(
     downloaderState: DownloaderState? = null,
     canPlay: Boolean = true,
     canShuffle: Boolean = item.canShuffle,
+    canDownload: Boolean = item.canDownload,
+    isDownloaded: Boolean = item.isDownloaded(),
 ) {
     val context = LocalContext.current
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -156,14 +158,14 @@ fun ItemButtonsBar(
                     }
                 }
                 if (downloaderState != null && !downloaderState.isDownloading) {
-                    if (item.isDownloaded()) {
+                    if (isDownloaded) {
                         FilledTonalIconButton(onClick = { deleteDownloadDialogOpen = true }) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_trash),
                                 contentDescription = null,
                             )
                         }
-                    } else if (item.canDownload) {
+                    } else if (canDownload) {
                         FilledTonalIconButton(
                             onClick = {
                                 storageLocations = context.getExternalFilesDirs(null)
