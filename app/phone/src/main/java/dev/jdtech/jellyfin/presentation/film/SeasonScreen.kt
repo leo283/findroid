@@ -35,11 +35,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
 import dev.jdtech.jellyfin.core.presentation.dummy.dummySeason
 import dev.jdtech.jellyfin.film.presentation.season.SeasonAction
 import dev.jdtech.jellyfin.film.presentation.season.SeasonState
 import dev.jdtech.jellyfin.film.presentation.season.SeasonViewModel
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.EpisodeCard
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
@@ -80,15 +82,29 @@ fun SeasonScreen(
                 is SeasonAction.OnHomeClick -> navigateHome()
                 is SeasonAction.NavigateToItem -> navigateToItem(action.item)
                 is SeasonAction.NavigateToSeries -> navigateToSeries(action.seriesId)
+                is SeasonAction.Shuffle -> {
+                    val intent = Intent(context, PlayerActivity::class.java)
+                    intent.putExtra("itemId", seasonId.toString())
+                    intent.putExtra("itemKind", BaseItemKind.SEASON.serialName)
+                    intent.putExtra("shuffle", true)
+                    context.startActivity(intent)
+                }
                 else -> Unit
             }
             viewModel.onAction(action)
         },
+        onDownloadSeason = { storageIndex -> viewModel.downloadSeason(storageIndex) },
+        onDeleteSeasonDownloads = { viewModel.deleteSeasonDownloads() },
     )
 }
 
 @Composable
-private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> Unit) {
+private fun SeasonScreenLayout(
+    state: SeasonState,
+    onAction: (SeasonAction) -> Unit,
+    onDownloadSeason: (storageIndex: Int) -> Unit,
+    onDeleteSeasonDownloads: () -> Unit,
+) {
     val safePadding = rememberSafePadding()
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
@@ -106,6 +122,7 @@ private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> U
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
             ) {
                 item {
+                    val hasDownloads = state.episodes.any { it.isDownloaded() }
                     ItemHeader(
                         item = season,
                         lazyListState = lazyListState,
@@ -143,6 +160,8 @@ private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> U
                     Spacer(Modifier.height(MaterialTheme.spacings.default.div(2)))
                     ItemButtonsBar(
                         item = season,
+                        downloaderState =
+                            if (state.episodes.isNotEmpty()) DownloaderState() else null,
                         onPlayClick = { startFromBeginning ->
                             onAction(SeasonAction.Play(startFromBeginning = startFromBeginning))
                         },
@@ -159,12 +178,18 @@ private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> U
                             }
                         },
                         onTrailerClick = {},
-                        onDownloadClick = {},
+                        onDownloadClick = { storageIndex -> onDownloadSeason(storageIndex) },
                         onDownloadCancelClick = {},
-                        onDownloadDeleteClick = {},
+                        onDownloadDeleteClick = onDeleteSeasonDownloads,
+                        onShuffleClick = { startFromBeginning ->
+                            onAction(SeasonAction.Shuffle(startFromBeginning = startFromBeginning))
+                        },
                         modifier =
                             Modifier.padding(start = paddingStart, end = paddingEnd).fillMaxWidth(),
                         canPlay = state.episodes.isNotEmpty(),
+                        canDownload = state.episodes.any { it.canDownload },
+                        isDownloaded = hasDownloads,
+                        canShuffle = state.episodes.isNotEmpty(),
                     )
                 }
                 items(items = state.episodes, key = { episode -> episode.id }) { episode ->
@@ -204,5 +229,12 @@ private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> U
 @PreviewScreenSizes
 @Composable
 private fun SeasonScreenLayoutPreview() {
-    FindroidTheme { SeasonScreenLayout(state = SeasonState(season = dummySeason), onAction = {}) }
+    FindroidTheme {
+        SeasonScreenLayout(
+            state = SeasonState(season = dummySeason),
+            onAction = {},
+            onDownloadSeason = {},
+            onDeleteSeasonDownloads = {},
+        )
+    }
 }
