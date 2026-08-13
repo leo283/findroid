@@ -49,9 +49,13 @@ fun ItemButtonsBar(
     onDownloadCancelClick: () -> Unit,
     onDownloadDeleteClick: () -> Unit,
     onTrailerClick: (uri: String) -> Unit,
+    onShuffleClick: (startFromBeginning: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     downloaderState: DownloaderState? = null,
     canPlay: Boolean = true,
+    canShuffle: Boolean = item.canShuffle,
+    canDownload: Boolean = item.canDownload,
+    isDownloaded: Boolean = item.isDownloaded(),
 ) {
     val context = LocalContext.current
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -154,14 +158,14 @@ fun ItemButtonsBar(
                     }
                 }
                 if (downloaderState != null && !downloaderState.isDownloading) {
-                    if (item.isDownloaded()) {
+                    if (isDownloaded) {
                         FilledTonalIconButton(onClick = { deleteDownloadDialogOpen = true }) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_trash),
                                 contentDescription = null,
                             )
                         }
-                    } else if (item.canDownload) {
+                    } else if (canDownload) {
                         FilledTonalIconButton(
                             onClick = {
                                 storageLocations = context.getExternalFilesDirs(null)
@@ -178,6 +182,14 @@ fun ItemButtonsBar(
                                 contentDescription = null,
                             )
                         }
+                    }
+                }
+                if (canShuffle){
+                    FilledTonalIconButton(onClick = { onShuffleClick(false) }) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_shuffle),
+                            contentDescription = null,
+                        )
                     }
                 }
             }
@@ -251,6 +263,7 @@ private fun ItemButtonsBarPreview() {
             onDownloadCancelClick = {},
             onDownloadDeleteClick = {},
             onTrailerClick = {},
+            onShuffleClick = {},
         )
     }
 }
@@ -270,6 +283,7 @@ private fun ItemButtonsBarDownloadingPreview() {
             onDownloadCancelClick = {},
             onDownloadDeleteClick = {},
             onTrailerClick = {},
+            onShuffleClick = {},
         )
     }
 }
